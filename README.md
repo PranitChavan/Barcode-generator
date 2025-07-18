@@ -1,48 +1,90 @@
-# TypeScript Node.js Project
+# PDAC Barcode Generator
 
-This is a simple Node.js project written in TypeScript. It serves as a starting point for building applications using TypeScript with Node.js.
+This project generates CODE128 barcodes for careOn wards using data from Excel (XLSX) files. It reads ward/unit data from Excel files in a source folder, generates barcode images for each entry, and saves them as PNG files in organized output folders.
+
+## Features
+
+- Reads data from multiple XLSX files in a source directory
+- Generates CODE128 barcodes using `jsbarcode` and `canvas`
+- Saves barcodes as PNG images in per-hospital/unit folders
+- Cleans and recreates output folders on each run
+- TypeScript-based, with easy development and debugging setup
 
 ## Project Structure
 
 ```
-typescript-nodejs-project
-├── src
-│   └── index.ts        # Entry point of the application
-├── package.json        # Project metadata and dependencies
-├── tsconfig.json       # TypeScript configuration
-└── README.md           # Project documentation
+Barcode-generator/
+├── src/
+│   └── index.ts           # Main application logic
+├── Source files/          # Place your XLSX files here (input data)
+├── barcodes/              # Output directory for generated barcodes (auto-created)
+├── package.json           # Project metadata and dependencies
+├── tsconfig.json          # TypeScript configuration
+├── .gitignore             # Git ignore rules
+├── README.md              # Project documentation
+└── ...
 ```
 
 ## Getting Started
 
-To get started with this project, follow these steps:
-
 1. **Clone the repository:**
+
    ```
-   git clone <repository-url>
-   cd typescript-nodejs-project
+   git clone https://github.com/PranitChavan/Barcode-generator.git
+   cd Barcode-generator
    ```
 
 2. **Install dependencies:**
+
    ```
    npm install
    ```
 
-3. **Compile TypeScript files:**
+3. **Add your Excel files:**
+
+   - Place your `.xlsx` files in the `Source files` directory. Each file should have ward/unit names in the first column of the first sheet.
+
+4. **Build the project:**
+
    ```
-   npx tsc
+   npm run build
    ```
 
-4. **Run the application:**
+5. **Run the application:**
    ```
-   node dist/index.js
+   npm start
    ```
+   This will compile the TypeScript and run the barcode generator. Output images will be saved in the `barcodes` directory, organized by hospital/unit.
+
+## Development (Live Reload)
+
+For live development (auto-compile and restart on save), you can use tools like `nodemon` and `concurrently`. Add these to your `devDependencies` and use a script like:
+
+```
+"dev": "concurrently \"tsc -w\" \"nodemon dist/index.js\""
+```
+
+Then run:
+
+```
+npm run dev
+```
+
+## Debugging
+
+This project is ready for debugging in VS Code:
+
+- Open the project in VS Code.
+- Set breakpoints in `src/index.ts`.
+- Use the provided launch configuration in `.vscode/launch.json`.
+- Press F5 to start debugging.
 
 ## Scripts
 
-- `npm run build`: Compiles the TypeScript files.
-- `npm start`: Runs the application.
+- `npm run build`: Compiles the TypeScript files to `dist/`.
+- `npm start`: Compiles and runs the application.
+- `npm run dev`: (If configured) Runs TypeScript in watch mode and restarts on changes.
 
-## Contributing
+## License
 
-Feel free to submit issues or pull requests for any improvements or features you would like to see in this project.
+MIT License

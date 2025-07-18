@@ -3,23 +3,19 @@ import { createCanvas } from 'canvas';
 import * as fs from 'fs';
 import * as XLSX from 'xlsx';
 import path from 'path';
+import { readdir, rm, mkdir } from 'fs/promises';
 
-const EXCEL_FILE_PATH = path.join(__dirname, '../Barcode images data source/MILPARK_WARDS.xlsx'); // Relative path to the Excel file
+const BASE_SOURCE_FILES_PATH = path.join(__dirname, '../Source files/');
 const OUTPUT_DIR = path.join(__dirname, './barcodes');
+const hospitalUnitWardsMap: Map<string, string[]> = new Map();
 
-function generateBarcode(data: string, filename: string) {
-  const canvas = createCanvas(200, 100);
-  JsBarcode(canvas, data, {
-    format: 'CODE128',
-    displayValue: true,
-    fontSize: 18,
-  });
-
-  const buffer = canvas.toBuffer('image/png');
+async function getAllSourceFiles(directoryPath: string): Promise<string[]> {
   try {
-    fs.writeFileSync(`${OUTPUT_DIR}/${filename}.png`, buffer);
-  } catch (error) {
-    console.error(`Error writing file: ${error}`);
+    const files: string[] = await readdir(directoryPath);
+    return files;
+  } catch (error: unknown) {
+    console.error(`Error fetching source files: ${error}`);
+    return [];
   }
 }
 
@@ -34,25 +30,64 @@ function readDataFromExcel(filePath: string): string[] {
   return extractedData;
 }
 
-function main() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    console.log('Output directory does not exist. Creating...');
-    fs.mkdirSync(OUTPUT_DIR);
-  } else {
-    console.log('Output directory already exists.');
-  }
+async function generateBarcode(wards: string[], folderName: string) {
+  const outputFolder = `${OUTPUT_DIR}/${folderName}`;
+  await removeOrCreateFolder(outputFolder);
 
-  const data = readDataFromExcel(EXCEL_FILE_PATH);
+  wards.forEach((ward) => {
+    const canvas = createCanvas(200, 100);
 
-  data.forEach((item, index) => {
-    if (index === 0) return;
-    generateBarcode(item, `barcode_${index}`);
-    console.log(`Generated barcode for: ${item}`);
+    JsBarcode(canvas, ward, {
+      format: 'CODE128',
+      displayValue: true,
+      fontSize: 18,
+    });
+
+    const buffer = canvas.toBuffer('image/png');
+    try {
+      fs.writeFileSync(`${outputFolder}/${folderName}_${ward}_BARCODE.png`, buffer);
+    } catch (error) {
+      console.error(`Error writing file: ${error}`);
+    }
   });
-
-  console.log('Barcode generation complete!');
 }
 
-main();
+async function removeOrCreateFolder(folderPath: string): Promise<void> {
+  try {
+    if (fs.existsSync(folderPath)) {
+      await rm(folderPath, { recursive: true, force: true });
+    }
+    await mkdir(folderPath, { recursive: true });
+  } catch (error) {
+    console.error('Error removing or creating folder:', error);
+  }
+}
 
-// MILPARK_C23W1015_BARCODE
+async function init() {
+  await removeOrCreateFolder(OUTPUT_DIR);
+
+  if (!fs.existsSync(BASE_SOURCE_FILES_PATH)) {
+    console.error('Source files to generated barcodes does not exists');
+    return;
+  }
+
+  const filesNames: string[] = await getAllSourceFiles(BASE_SOURCE_FILES_PATH);
+
+  filesNames.forEach((fileName: string) => {
+    const fileNameWithoutExtension = path.parse(fileName).name;
+    hospitalUnitWardsMap.set(fileNameWithoutExtension, []);
+
+    const excelData = readDataFromExcel(`${BASE_SOURCE_FILES_PATH}${fileName}`);
+    excelData.shift();
+
+    if (hospitalUnitWardsMap.has(fileNameWithoutExtension)) {
+      hospitalUnitWardsMap.get(fileNameWithoutExtension)?.push(...excelData);
+    }
+  });
+
+  hospitalUnitWardsMap.forEach((wards: string[], hospitalUnit: string) => {
+    generateBarcode(wards, hospitalUnit);
+  });
+}
+
+init();
