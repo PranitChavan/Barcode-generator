@@ -25,13 +25,14 @@ function readDataFromExcel(filePath: string): string[] {
   const sheet = workbook.Sheets[sheetName];
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-  const extractedData = (data as any[]).map((row) => row[0]).filter(Boolean);
+  const extractedData = (data as any[]).map((row) => `${row[0]}_${row[1]}`.trim()).filter(Boolean);
 
   return extractedData;
 }
 
 async function generateBarcode(wards: string[], folderName: string) {
   const outputFolder = `${OUTPUT_DIR}/${folderName}`;
+
   await removeOrCreateFolder(outputFolder);
 
   wards.forEach((ward) => {
@@ -45,11 +46,18 @@ async function generateBarcode(wards: string[], folderName: string) {
 
     const buffer = canvas.toBuffer('image/png');
     try {
-      fs.writeFileSync(`${outputFolder}/${folderName}_${ward}_BARCODE.png`, buffer);
+      console.log(`Generating barcode for: ${ward}...`);
+      fs.writeFile(`${outputFolder}/${ward}_BARCODE.png`, buffer, (error) => {
+        if (error) {
+          throw error;
+        }
+      });
     } catch (error) {
       console.error(`Error writing file: ${error}`);
     }
   });
+
+  console.log(`Barcode generation complete for ${folderName}`);
 }
 
 async function removeOrCreateFolder(folderPath: string): Promise<void> {
@@ -74,14 +82,15 @@ async function init() {
   const filesNames: string[] = await getAllSourceFiles(BASE_SOURCE_FILES_PATH);
 
   filesNames.forEach((fileName: string) => {
-    const fileNameWithoutExtension = path.parse(fileName).name;
-    hospitalUnitWardsMap.set(fileNameWithoutExtension, []);
-
     const excelData = readDataFromExcel(`${BASE_SOURCE_FILES_PATH}${fileName}`);
     excelData.shift();
 
-    if (hospitalUnitWardsMap.has(fileNameWithoutExtension)) {
-      hospitalUnitWardsMap.get(fileNameWithoutExtension)?.push(...excelData);
+    const hospitalUnit = excelData[0].split('_')[1];
+
+    hospitalUnitWardsMap.set(hospitalUnit, []);
+
+    if (hospitalUnitWardsMap.has(hospitalUnit)) {
+      hospitalUnitWardsMap.get(hospitalUnit)?.push(...excelData);
     }
   });
 
